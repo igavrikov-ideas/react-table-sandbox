@@ -60,7 +60,9 @@ body {
         display: flex;
         align-items: center;
         &--data {
-            border-bottom: 1px solid #DEE3E7;
+            &:not(:first-child) {
+                border-top: 1px solid #DEE3E7;
+            }
             &:hover {
                 background-color: #F4F8F9;
             }
