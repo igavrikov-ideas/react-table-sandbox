@@ -1,0 +1,168 @@
+@font-face {
+    font-family: 'Avenir';
+    src: url(../assets/Avenir-Light.a207a2ae8bee303d3796120df994271d.eot);
+    src: url(../assets/Avenir-Light.44b6e5444e05ceb9df67f1a3379d1590.woff2) format("woff2"), url(../assets/Avenir-Light.79b2fdb29b78aa4f17bc71bb8febf3ce.woff) format("woff");
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Avenir';
+    src: url(../assets/Avenir-Book.0a7da4b509e3f99ac71923bb5e24b658.eot);
+    src: url(../assets/Avenir-Book.65de3330d961737a93fa165baa8cdef9.woff2) format("woff2"), url(../assets/Avenir-Book.1c548c7c12a48d6cbf2a7b0436474774.woff) format("woff");
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Avenir';
+    src: url(../assets/Avenir-Medium.b4302a95788edd6c6b1d1578e00a98fc.eot);
+    src: url(../assets/Avenir-Medium.e3e3eb7792d00245c258ec4276b0404e.woff2) format("woff2"), url(../assets/Avenir-Medium.e608b556cf98bc97fbd5535478dd881d.woff) format("woff");
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Avenir';
+    src: url(../assets/Avenir-Heavy.6c8137a0055d264ae4eaa625d08d75f0.eot);
+    src: url(../assets/Avenir-Heavy.16111d8acb52cb589453e848b3b11bea.woff2) format("woff2"), url(../assets/Avenir-Heavy.661bb7e0329e128ad09eab0e5b284e80.woff) format("woff");
+    font-weight: 900;
+    font-style: normal;
+}
+
+.container {
+    position: relative;
+    margin-left: auto;
+    margin-right: auto;
+    padding-right: 7.5px;
+    padding-left: 7.5px;
+}
+
+@media (min-width: 768px) {
+    .container {
+        padding-right: 7.5px;
+        padding-left: 7.5px;
+    }
+}
+
+@media (min-width: 968px) {
+    .container {
+        padding-right: 7.5px;
+        padding-left: 7.5px;
+    }
+}
+
+@media (min-width: 1088px) {
+    .container {
+        padding-right: 7.5px;
+        padding-left: 7.5px;
+    }
+}
+
+@media (min-width: 1280px) {
+    .container {
+        padding-right: 7.5px;
+        padding-left: 7.5px;
+    }
+}
+
+@media (min-width: 768px) {
+    .container {
+        width: 720px;
+        max-width: 100%;
+    }
+}
+
+@media (min-width: 968px) {
+    .container {
+        width: 968px;
+        max-width: 100%;
+    }
+}
+
+@media (min-width: 1088px) {
+    .container {
+        width: 1088px;
+        max-width: 100%;
+    }
+}
+
+@media (min-width: 1280px) {
+    .container {
+        width: 1280px;
+        max-width: 100%;
+    }
+}
+
+@media (min-width: 1280px) {
+    .container {
+        width: 90%;
+    }
+}
+
+h1 {
+    margin: .5rem 0;
+    font-size: 24px;
+    line-height: 28px;
+    letter-spacing: .5px;
+    font-weight: 500;
+    color: #4B5562;
+}
+
+.btn {
+    display: inline-block;
+    font-weight: normal;
+    line-height: 1.25;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: 0.5rem 1rem;
+    font-size: 16px;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.btn:focus,
+.btn:hover {
+    text-decoration: none;
+}
+
+.btn:focus,
+.btn.focus {
+    outline: 0;
+    box-shadow: 0 0 0 2px rgba(2, 117, 216, 0.25);
+}
+
+.btn.disabled,
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}
+
+.btn:active,
+.btn.active {
+    background-image: none;
+}
+
+.btn-success {
+    color: #fff;
+    background-color: #70BE46;
+    border-color: #70BE46;
+}
+
+.btn-success:hover {
+    color: #fff;
+    background-color: #599b36;
+    border-color: #559334;
+}
+
+.btn-success:focus,
+.btn-success.focus {
+    box-shadow: 0 0 0 2px rgba(112, 190, 70, 0.5);
+}
