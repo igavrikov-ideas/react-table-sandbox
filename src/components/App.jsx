@@ -1,19 +1,30 @@
 import React from 'react';
-import DataTable from './DataTable';
 import { AutoSizer } from 'react-virtualized';
 import axios from 'axios';
+import DataTable from './DataTable';
+
+const ENTITY_CLASS = 'Affair';
 
 const locale = {
   en: {
-    number: 'Invoice no',
-    type: 'Invoice type',
-    status: 'Status',
-    recipient: 'Recipient',
-    case: 'Case',
-    client: 'Client',
-    issueDate: 'Issue date',
-    dueDate: 'Due date',
-    amountToPay: 'Grand total without VAT (€)'
+    id: 'ID',
+    name: 'Name',
+    startDate: 'Start date',
+    endDate: 'End date',
+    budget: 'Budget',
+    contractNo: 'Contract no',
+    contractDate: 'Contract date',
+    customer: 'Customer',
+    code: 'Code',
+    manager: 'Manager',
+    fixedPrice: 'Fixed price',
+    businessSector: 'Business sector',
+    areas: 'Case area',
+    notes: 'Notes',
+    contact: 'Contact',
+    counterpartyRegNo: 'Counterparty reg no',
+    counterpartyName: 'Counterparty name',
+    active: 'Active'
   },
   et: {
     number: 'Arve nr',
@@ -35,7 +46,15 @@ const DateFormat = (props) => (
   <span>{Intl.DateTimeFormat(props.locale).format(new Date(props.value))}</span>
 );
 
-const columns = ['number', 'type', 'status', 'recipient', 'case', 'client', 'issueDate', 'dueDate', 'amountToPay'];
+const columns = [
+  'id',
+  'name', 'startDate', 'endDate',
+  'budget', 'contractNo', 'contractDate',
+  'customer', 'code', 'manager',
+  'fixedPrice', 'businessSector', 'areas',
+  'notes', 'contact', 'counterpartyRegNo',
+  'counterpartyName', 'active'
+];
 
 class App extends React.Component {
   state = {
@@ -44,12 +63,17 @@ class App extends React.Component {
   };
 
   columnDecorator = (field) => {
+    const priceCellRenderer = ({ cellData }) => cellData === null ? '' : <CurrencyFormat value={cellData/100} locale={this.state.locale} />;
+    const dateCellRenderer = ({ cellData }) => cellData === null ? '' : <DateFormat value={cellData} locale={this.state.locale} />;
     switch (field) {
-      case 'issueDate':
-      case 'dueDate':
-        return { cellRenderer: ({ cellData }) => <DateFormat value={cellData} locale={this.state.locale} /> };
-      case 'amountToPay':
-        return { cellRenderer: ({ cellData }) => <CurrencyFormat value={cellData} locale={this.state.locale} /> };
+      case 'startDate':
+      case 'endDate':
+      case 'contractDate':
+        return { cellRenderer: dateCellRenderer };
+      case 'budget':
+        return { weight: 2, cellRenderer: priceCellRenderer };
+      case 'fixedPrice':
+        return { cellRenderer: priceCellRenderer };
       default:
         return {};
     }
@@ -65,7 +89,11 @@ class App extends React.Component {
 
   getIds = async () => {
     if (this.state.ids === null) {
-      const data = (await axios.get('/api/invoices')).data;
+      const data = (await axios.get('api/search', {
+        params: {
+          entity: ENTITY_CLASS
+        }
+      })).data.map(el => el[1]);
       this.setState({ ids: data });
       return data;
     } else {
@@ -75,10 +103,24 @@ class App extends React.Component {
 
   rowLoader = async (startIndex, stopIndex) => {
     const ids = await this.getIds();
-    console.log('lets send', startIndex, stopIndex, ids);
-    return axios.post('/api/invoices/details', {
-      data: ids.slice(startIndex, stopIndex)
+    return axios.get('api/data', {
+      params: {
+        entity: ENTITY_CLASS,
+        ids: ids.slice(startIndex, stopIndex + 1).join(),
+        associations: 'customer,account,manager,contact'
+      }
     }).then((res) => res.data);
+  }
+
+  rowContentRenderer = (dataKey, data) => {
+    switch (dataKey) {
+      case 'customer':
+      case 'manager':
+      case 'contact':
+        return data === null ? data : data.name;
+      default:
+        return data;
+    }
   }
 
   render() {
@@ -100,9 +142,11 @@ class App extends React.Component {
             {({ width }) => <DataTable
               ids={this.state.ids}
               columns={columns}
+              defaultColumns={columns.filter(c => c !== 'id')}
               rowLoader={this.rowLoader}
               columnNamer={this.translate}
               columnDecorator={this.columnDecorator}
+              rowContentRenderer={this.rowContentRenderer}
               width={width} />}
           </AutoSizer>
         </div>

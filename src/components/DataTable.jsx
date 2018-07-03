@@ -1,5 +1,6 @@
 import React from 'react';
-import { AutoSizer, InfiniteLoader, Table, Column, SortDirection } from 'react-virtualized';
+import { InfiniteLoader, Table, Column, SortDirection } from 'react-virtualized';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import Icon from './Icon';
 
 function SortIndicator({ sortDirection }) {
@@ -32,6 +33,7 @@ class DataTable extends React.Component {
       sortedData: [],
       loaded: false,
       columnDisplay,
+      columnOrder: Object.entries(columnDisplay).map(c => c[0]),
       displayingFields: false
     };
   }
@@ -49,18 +51,22 @@ class DataTable extends React.Component {
   }
 
   getColumnProps(dataKey) {
-    let props = {};
+    let props = { weight: 1 };
     if (this.props.columnDecorator !== undefined) {
-      props = this.props.columnDecorator(dataKey);
+      props = Object.assign(props, this.props.columnDecorator(dataKey));
     }
     if (props.disableSort !== true) {
       props.headerClassName = 'datatable__cell--sortable';
     }
     const cellRenderer = props.cellRenderer;
-    props.cellRenderer = (obj) =>
-      <div className="datatable__cell__contents">
-        {cellRenderer !== undefined ? cellRenderer(obj) : (obj.cellData === null ? '' : String(obj.cellData))}
+    const contentRenderer = this.props.rowContentRenderer === null ? (a, b) => b : this.props.rowContentRenderer;
+    props.cellRenderer = (obj) => {
+      const contents = obj.cellData === undefined ? obj.cellData : contentRenderer(dataKey, obj.cellData);
+      const newObj = Object.assign(Object.assign({}, obj), {cellData: contents});
+      return <div className="datatable__cell__contents">
+        {cellRenderer !== undefined ? cellRenderer(newObj) : (newObj.cellData === null ? '' : String(newObj.cellData))}
       </div>;
+    };
     return props;
   }
 
@@ -71,16 +77,40 @@ class DataTable extends React.Component {
     this.setState({ displayingFields: !this.state.displayingFields });
   }
 
+  reorderColumns = (startIndex, endIndex) => {
+    const columnOrder = Array.from(this.state.columnOrder);
+    const [removed] = columnOrder.splice(startIndex, 1);
+    columnOrder.splice(endIndex, 0, removed);
+    this.setState({ columnOrder });
+  }
+
+  onColumnDragEnd = (result) => {
+    if (!result.destination) {
+      return;
+    }
+    this.reorderColumns(result.source.index, result.destination.index);
+  }
+
   propertiesRenderer = () => {
     return <div className="fields">
       <a className="fields__toggle" href="#" onClick={this.toggleColumnDetails}><Icon style={{ width: 15 }} icon="details" /></a>
       <div className={`fields__dropdown ${this.state.displayingFields ? 'fields__dropdown--visible' : ''}`}>
-        {Object.entries(this.state.columnDisplay).map((entry, idx) => {
-          return <div key={idx} style={{ display: 'flex', alignItems: 'center' }}>
-            <label htmlFor={entry[0]} style={{ flex: 1 }}>{this.getColumnName(entry[0])}</label>
-            <input type="checkbox" name={entry[0]} checked={entry[1]} onChange={this.reloadColumns} />
-          </div>;
-        })}
+        <DragDropContext onDragEnd={this.onColumnDragEnd}>
+          <Droppable droppableId="droppable">
+            {(provided, snapshot) => <div ref={provided.innerRef}>
+              {this.state.columnOrder.map((entry, idx) => {
+                return <Draggable key={idx} draggableId={idx} index={idx}>
+                  {(provided, snapshot) => 
+                    <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} style={{ display: 'flex', alignItems: 'center', ...provided.draggableProps.style }}>
+                      <div style={{ flex: 1 }}>{this.getColumnName(entry)}</div>
+                      <input type="checkbox" name={entry} checked={this.state.columnDisplay[entry]} onChange={this.reloadColumns} />
+                    </div>
+                  }
+                </Draggable>;
+              })}
+            </div>}
+          </Droppable>
+        </DragDropContext>
       </div>
     </div>;
   }
@@ -112,7 +142,7 @@ class DataTable extends React.Component {
   }
 
   isRowLoaded = ({ index }) => {
-    return !!this.state.sortedData[index];
+    return this.state.data.filter(d => d.id === this.props.ids[index]).length > 0;
   }
 
   switchLocale = () => {
@@ -126,12 +156,14 @@ class DataTable extends React.Component {
   }
 
   rowCount = () => {
-    return this.state.data.length === 0 && this.state.loaded === true ? 0 : this.state.sortedData.length + 1;
+    //return this.state.data.length === 0 && this.state.loaded === true ? 0 : this.state.sortedData.length + 1;
+    return this.props.ids === null ? 1 : this.props.ids.length;
   }
 
-  loadMoreRows = ({ startIndex }) => new Promise((resolve, reject) => {
-    this.props.rowLoader(startIndex, startIndex + 19).then((data) => {
-      this.setState({ data: this.state.data.concat(data), sortedData: this.state.sortedData.concat(data) });
+  loadMoreRows = ({ startIndex, stopIndex }) => new Promise((resolve, reject) => {
+    this.props.rowLoader(startIndex, stopIndex).then((data) => {
+      const existingData = data.filter(ed => !this.state.data.map(d => d.id).includes(ed.id));
+      this.setState({ data: this.state.data.concat(existingData), sortedData: this.state.sortedData.concat(existingData) });
       this.forceUpdate();
       resolve();
     }).catch((e) => reject(e));
@@ -143,8 +175,10 @@ class DataTable extends React.Component {
       sortDirection
     } = this.state;
 
-    const columnArray = Object.entries(this.state.columnDisplay).filter(c => c[1] === true).map(c => c[0]);
+    const columnArray = this.state.columnOrder.filter(c => this.state.columnDisplay[c]);
     const width = this.props.width || 960;
+    const columnProps = columnArray.map(c => this.getColumnProps(c));
+    const totalWeight = columnProps.reduce((acc, cur) => acc + cur.weight, 0);
 
     return <InfiniteLoader
       ref={(el) => this.loader = el}
@@ -176,10 +210,12 @@ class DataTable extends React.Component {
           {columnArray.map((el, idx) => <Column
             key={idx}
             dataKey={el}
-            width={Math.floor((width - 40) / (columnArray.length - 1))}
+            minWidth={Math.floor((width - 80) / totalWeight * columnProps[idx].weight)}
+            width={0}
             headerRenderer={this.headerRenderer}
             className="datatable__cell"
-            {...this.getColumnProps(el)}
+            flexGrow={1}
+            {...columnProps[idx]}
           />)}
           <Column
             dataKey="edit"
@@ -187,8 +223,6 @@ class DataTable extends React.Component {
             disableSort
             headerClassName="datatable__row--edit"
             className="datatable__row--edit"
-            flexGrow={0}
-            flexShrink={1}
             headerRenderer={this.propertiesRenderer}
             cellRenderer={() => <div><a href="#"><Icon style={{ width: 15 }} icon="edit" /></a>&nbsp;<a href="#"><Icon style={{ width: 15 }} icon="delete" /></a></div>} />
         </Table>}

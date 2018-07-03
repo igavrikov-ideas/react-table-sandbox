@@ -38,6 +38,8 @@ body {
     &__cell {
         &__contents {
             padding-left: 10px;
+            text-overflow: ellipsis;
+            overflow: hidden;
         }
         &--header {
             font-weight: 900;
@@ -65,6 +67,9 @@ body {
             }
             &:hover {
                 background-color: #F4F8F9;
+            }
+            &:last-child {
+                border-bottom: 1px solid #DEE3E7;
             }
         }
         &--loading {
