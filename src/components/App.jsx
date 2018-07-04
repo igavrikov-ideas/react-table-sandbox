@@ -123,6 +123,15 @@ class App extends React.Component {
     }
   }
 
+  groupUpdate = (e) => {
+    this.setState({ group: e.target.value === '' ? undefined : [e.target.value] });
+  }
+
+  filterUpdate = (e) => {
+    const customerName = e.target.value;
+    this.setState({ filter: customerName === '' ? undefined : (obj) => obj.customer.name && obj.customer.name.indexOf(customerName) !== -1 });
+  }
+
   render() {
     return <div>
       <div className="nav">
@@ -133,6 +142,14 @@ class App extends React.Component {
       <br />
 
       <div id="content">
+        <select onChange={this.groupUpdate}>
+          <option value=""></option>
+          <option value="customer.name">Client</option>
+          <option value="name">Name</option>
+          <option value="businessSector.0">Business sector</option>
+        </select>
+        <input type="text" onChange={this.filterUpdate} />
+
         <div className="container">
           <div><h1>Arved</h1></div>
         </div>
@@ -141,6 +158,9 @@ class App extends React.Component {
           <AutoSizer disableHeight>
             {({ width }) => <DataTable
               ids={this.state.ids}
+              id={'CasesList'}
+              group={this.state.group}
+              filter={this.state.filter}
               columns={columns}
               defaultColumns={columns.filter(c => c !== 'id')}
               rowLoader={this.rowLoader}

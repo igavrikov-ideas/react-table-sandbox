@@ -1,7 +1,10 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { InfiniteLoader, Table, Column, SortDirection } from 'react-virtualized';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import Icon from './Icon';
+import ClickOutside from './ClickOutside';
+import Checkbox from './Checkbox';
 
 function SortIndicator({ sortDirection }) {
   const className = 'datatable__sortableIcon';
@@ -19,23 +22,90 @@ function SortIndicator({ sortDirection }) {
   );
 }
 
+function groupBy(list, fields) {
+  return list.reduce((result, obj) => {
+    // Find existing group, walking the tree for dot-separated paths
+    const arr = result.filter(e => {
+      let match = true;
+      fields.some(f => {
+        const tree = f.split('.');
+        let a = obj;
+        for (let i = 0; i < tree.length; i++) {
+          a = a[tree[i]];
+        }
+        match = match && a === e[f];
+        return match === false;
+      });
+      return match;
+    });
+
+    // Create new group if none found
+    let group;
+    if (arr.length === 0) {
+      const newGroup = { _name: '', _entries: [] };
+      const nameParts = [];
+      fields.forEach(f => {
+        const tree = f.split('.');
+        let a = obj;
+        for (let i = 0; i < tree.length; i++) {
+          a = a[tree[i]];
+        }
+        newGroup[f] = a;
+        nameParts.push(String(a));
+      });
+      newGroup._name = nameParts.join(' / ');
+      result.push(newGroup);
+      group = newGroup;
+    } else {
+      group = arr[0];
+    }
+
+    // Assign to group
+    group._entries.push(obj);
+    return result;
+  }, []);
+}
+
 class DataTable extends React.Component {
-  constructor(props) {
-    super(props);
+  constructor(props, context) {
+    super(props, context);
     const columnDisplay = {};
     props.columns.forEach((col) => {
       columnDisplay[col] = props.defaultColumns !== undefined ? props.defaultColumns.includes(col) : true;
     });
+    let preferences = {
+      columnDisplay,
+      columnOrder: Object.entries(columnDisplay).map(c => c[0])
+    };
+    try {
+      preferences = JSON.parse(localStorage.getItem(props.id) || 'null');
+    } catch (e) {
+      // squash
+    }
     this.state = {
       sortBy: null,
       sortDirection: null,
       data: [],
       sortedData: [],
       loaded: false,
-      columnDisplay,
-      columnOrder: Object.entries(columnDisplay).map(c => c[0]),
-      displayingFields: false
+      displayingFields: false,
+      preferences
     };
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.group !== prevProps.group || this.props.filter !== prevProps.filter) {
+      this.groupRows();
+    }
+  }
+
+  groupRows = () => {
+    if (this.props.group) {
+      const data = this.props.filter === undefined ? this.state.sortedData : this.state.sortedData.filter(this.props.filter);
+      this.setState({ groupedData: groupBy(data, this.props.group) });
+    } else {
+      this.setState({ groupedData: undefined });
+    }
   }
 
   noRowsRenderer = () => <div className="datatable__empty">No data</div>;
@@ -73,15 +143,16 @@ class DataTable extends React.Component {
   headerRenderer = ({ dataKey, sortBy, sortDirection }) =>
     <div className="datatable__cell__contents">{this.getColumnName(dataKey)}{sortBy == dataKey && <SortIndicator sortDirection={sortDirection} />}</div>;
 
-  toggleColumnDetails = () => {
-    this.setState({ displayingFields: !this.state.displayingFields });
+  setPreferences = (prefs) => {
+    this.setState({ preferences: Object.assign(this.state.preferences, prefs) });
+    localStorage.setItem(this.props.id, JSON.stringify(this.state.preferences));
   }
 
   reorderColumns = (startIndex, endIndex) => {
-    const columnOrder = Array.from(this.state.columnOrder);
+    const columnOrder = Array.from(this.state.preferences.columnOrder);
     const [removed] = columnOrder.splice(startIndex, 1);
     columnOrder.splice(endIndex, 0, removed);
-    this.setState({ columnOrder });
+    this.setPreferences({ columnOrder });
   }
 
   onColumnDragEnd = (result) => {
@@ -92,27 +163,30 @@ class DataTable extends React.Component {
   }
 
   propertiesRenderer = () => {
-    return <div className="fields">
-      <a className="fields__toggle" href="#" onClick={this.toggleColumnDetails}><Icon style={{ width: 15 }} icon="details" /></a>
-      <div className={`fields__dropdown ${this.state.displayingFields ? 'fields__dropdown--visible' : ''}`}>
-        <DragDropContext onDragEnd={this.onColumnDragEnd}>
-          <Droppable droppableId="droppable">
-            {(provided, snapshot) => <div ref={provided.innerRef}>
-              {this.state.columnOrder.map((entry, idx) => {
-                return <Draggable key={idx} draggableId={idx} index={idx}>
-                  {(provided, snapshot) => 
-                    <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} style={{ display: 'flex', alignItems: 'center', ...provided.draggableProps.style }}>
-                      <div style={{ flex: 1 }}>{this.getColumnName(entry)}</div>
-                      <input type="checkbox" name={entry} checked={this.state.columnDisplay[entry]} onChange={this.reloadColumns} />
-                    </div>
-                  }
-                </Draggable>;
-              })}
-            </div>}
-          </Droppable>
-        </DragDropContext>
-      </div>
-    </div>;
+    return <ClickOutside handleClickOutside={() => this.setState({ displayingFields: false })}>
+      {({ registerChild }) => 
+        <div className="datatable__fields">
+          <a className={`datatable__fields__toggle ${this.state.displayingFields ? 'datatable__fields__toggle--active' : ''}`} href="#" onClick={() => this.setState({ displayingFields: true })}><Icon style={{ width: 15 }} icon="details" /></a>
+            <div ref={this.state.displayingFields ? registerChild : undefined} className={`datatable__fields__dropdown ${this.state.displayingFields ? 'datatable__fields__dropdown--visible' : ''}`}>
+              <DragDropContext onDragEnd={this.onColumnDragEnd}>
+                <Droppable droppableId="droppable">
+                  {(provided, snapshot) => <div ref={provided.innerRef}>
+                    {this.state.preferences.columnOrder.map((entry, idx, arr) => {
+                      return <Draggable key={idx} draggableId={idx} index={idx}>
+                        {(provided, snapshot) =>
+                          <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} style={{ display: 'flex', alignItems: 'center', opacity: snapshot.isDragging ? 0.5 : 1, ...provided.draggableProps.style }}>
+                            <Checkbox wrapperClass={`datatable__fields__entry ${idx === arr.length - 1 ? 'datatable__fields__entry--last' : ''}`} name={entry} checked={this.state.preferences.columnDisplay[entry]} onChange={this.reloadColumns}>{this.getColumnName(entry)}</Checkbox>
+                          </div>
+                        }
+                      </Draggable>;
+                    })}
+                  </div>}
+                </Droppable>
+              </DragDropContext>
+            </div>
+        </div>
+      }
+    </ClickOutside>;
   }
 
   sort = ({ sortBy, sortDirection }) => {
@@ -125,15 +199,82 @@ class DataTable extends React.Component {
     }, 500); // simulate requesting sorting from API
   }
 
+  getGroupTitleIndices = () => {
+    const groupTitles = [];
+    let groupOffset = 0;
+    for (let i = 0; i < this.state.groupedData.length; i++) {
+      groupTitles.push(groupOffset);
+      groupOffset += this.state.groupedData[i]._entries.length + 1;
+    }
+    return groupTitles;
+  }
+
+  adjustIndex = (index) => {
+    if (this.state.groupedData) {
+      const groupTitles = this.getGroupTitleIndices();
+      let group = 0;
+      for (let i = 0; i < groupTitles.length; i++) {
+        if (index - (groupTitles[i] + 1) < 0) {
+          break;
+        }
+        group = i;
+      }
+      const ret = { adjustedIndex: index - (groupTitles[group] + 1), group };
+      return ret;
+    } else {
+      return { adjustedIndex: index, group: 0 };
+    }
+  }
+
+  offsetIndex = (index) => {
+    if (this.state.groupedData) {
+      const groupTitles = this.getGroupTitleIndices();
+      let group = 0;
+      for (let i = 0; i < groupTitles.length; i++) {
+        if (index < groupTitles[i]) {
+          break;
+        }
+        group = i;
+      }
+      return index - (group + 1);
+    } else {
+      return index;
+    }
+  }
+
+  getFilteredIds = () => {
+    const filteredDataIds = (this.props.filter === undefined ? this.state.sortedData : this.state.sortedData.filter(this.props.filter)).map(d => d.id);
+    console.log('filtered data ids', filteredDataIds);
+    return this.props.filter === undefined ? this.props.ids :
+      this.props.ids.filter((id, idx) => !this.isRowLoaded({ index: idx }) || filteredDataIds.includes(id));
+  }
+
   rowGetter = ({ index }) => {
-    return this.state.sortedData[index] || { loading: true };
+    const data = this.props.filter === undefined ? this.state.sortedData : this.state.sortedData.filter(this.props.filter);
+    if (this.state.groupedData) {
+      const groupIndex = this.getGroupTitleIndices().indexOf(index);
+      if (groupIndex !== -1) {
+        return { _group: this.state.groupedData[groupIndex]._name };
+      } else {
+        const { adjustedIndex, group } = this.adjustIndex(index);
+        return this.state.groupedData[group]._entries[adjustedIndex] || { _loading: true };
+      }
+    }
+    const row = data[index];
+    return row === undefined ? (this.isRowLoaded({ index }) ? { _hide: true } : { _loading: true }) : row;
   };
 
   rowRenderer = ({ className, key, columns, rowData, style }) => {
-    if (rowData.loading) {
+    if (rowData._loading) {
       return <div className={`${className} ${className}--loading`} key={key} role="row" style={style}>
         <span>Loading...</span>
       </div>;
+    } else if (rowData._group) {
+      return <div className={`${className} ${className}--groupHeading`} key={key} role="row" style={style}>
+        <span>{rowData._group}</span>
+      </div>;
+    } else if (rowData._hide) {
+      return <div className={`${className} ${className}--empty`} key={key} style={style}></div>;
     } else {
       return <div className={`${className} ${className}--data`} key={key} role="row" style={style}>
         {columns}
@@ -141,8 +282,11 @@ class DataTable extends React.Component {
     }
   }
 
+  // Don't forget that this accepts an *object* as an argument!!!
   isRowLoaded = ({ index }) => {
-    return this.state.data.filter(d => d.id === this.props.ids[index]).length > 0;
+    const offsetIndex = this.offsetIndex(index);
+    const data = this.props.filter === undefined ? this.state.sortedData : this.state.sortedData.filter(this.props.filter);
+    return !!this.state.sortedData[offsetIndex];
   }
 
   switchLocale = () => {
@@ -151,19 +295,26 @@ class DataTable extends React.Component {
 
   reloadColumns = (e) => {
     // eslint-disable-next-line react/no-direct-mutation-state
-    this.state.columnDisplay[e.target.name] = !this.state.columnDisplay[e.target.name];
+    this.state.preferences.columnDisplay[e.target.name] = !this.state.preferences.columnDisplay[e.target.name];
+    this.setPreferences(this.state.preferences);
     this.forceUpdate();
   }
 
   rowCount = () => {
-    //return this.state.data.length === 0 && this.state.loaded === true ? 0 : this.state.sortedData.length + 1;
-    return this.props.ids === null ? 1 : this.props.ids.length;
+    if (this.props.ids === null) {
+      return 1;
+    }
+    const length = this.props.ids.length;
+    return this.state.groupedData ? length + this.state.groupedData.length : length;
   }
 
   loadMoreRows = ({ startIndex, stopIndex }) => new Promise((resolve, reject) => {
-    this.props.rowLoader(startIndex, stopIndex).then((data) => {
+    const offsetStartIndex = this.offsetIndex(startIndex);
+    const offsetStopIndex = this.offsetIndex(stopIndex);
+    this.props.rowLoader(offsetStartIndex, offsetStopIndex).then((data) => {
       const existingData = data.filter(ed => !this.state.data.map(d => d.id).includes(ed.id));
       this.setState({ data: this.state.data.concat(existingData), sortedData: this.state.sortedData.concat(existingData) });
+      this.groupRows();
       this.forceUpdate();
       resolve();
     }).catch((e) => reject(e));
@@ -175,7 +326,7 @@ class DataTable extends React.Component {
       sortDirection
     } = this.state;
 
-    const columnArray = this.state.columnOrder.filter(c => this.state.columnDisplay[c]);
+    const columnArray = this.state.preferences.columnOrder.filter(c => this.state.preferences.columnDisplay[c]);
     const width = this.props.width || 960;
     const columnProps = columnArray.map(c => this.getColumnProps(c));
     const totalWeight = columnProps.reduce((acc, cur) => acc + cur.weight, 0);
@@ -203,7 +354,7 @@ class DataTable extends React.Component {
           gridClassName="datatable__grid"
           sort={this.sort}
           height={500}
-          rowHeight={60}
+          rowHeight={({ index }) => this.rowGetter({ index })._hide ? 0 : 60}
           rowCount={this.rowCount()}
           width={width}
           style={{ width }} >
@@ -229,5 +380,9 @@ class DataTable extends React.Component {
     </InfiniteLoader>;
   }
 }
+
+DataTable.propTypes = {
+  id: PropTypes.string
+};
 
 export default DataTable;

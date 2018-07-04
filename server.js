@@ -1270,13 +1270,13 @@ api.get('/search', (req, res) => {
   if (req.query.entity === 'Affair') {
     out.push(...data.map(d => [req.query.entity, d.id]));
   }
-  setTimeout(() => res.send(out), 1000); // Simulate delay
+  setTimeout(() => res.send(out), 150); // Simulate delay
 });
 
 api.get('/data', (req, res) => {
   const ids = req.query.ids;
   const out = data.filter(d => ids.includes(d.id));
-  setTimeout(() => res.send(out), 1000); // Simulate delay
+  setTimeout(() => res.send(out), 150); // Simulate delay
 });
 
 /* End API */

@@ -9,7 +9,7 @@
     "dev": "concurrently \"yarn serve-dev\" \"webpack-dev-server --useLocalIp --config webpack.dev.js\"",
     "build": "webpack --config webpack.prod.js",
     "serve": "cross-env NODE_ENV=production node server.js",
-    "serve-dev": "cross-env NODE_ENV=development node server.js",
+    "serve-dev": "cross-env NODE_ENV=development nodemon server.js --watch server.js",
     "deploy": "yarn build && yarn serve"
   },
   "author": "Ilya Gavrikov <painttool@gmail.com>",
@@ -53,6 +53,7 @@
     "express-winston": "^2.5.1",
     "fixed-data-table-2": "^0.8.13",
     "morgan": "^1.9.0",
+    "nodemon": "^1.17.5",
     "react-beautiful-dnd": "^8.0.0",
     "react-dom": "^16.3.2",
     "react-virtualized": "^9.20.0",

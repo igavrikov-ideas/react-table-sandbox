@@ -166,3 +166,92 @@ h1 {
 .btn-success.focus {
     box-shadow: 0 0 0 2px rgba(112, 190, 70, 0.5);
 }
+
+p {
+    line-height: 1.25;
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+input.checkbox + label p {
+    width: 24px;
+    height: 24px;
+    display: block;
+    float: left;
+    position: relative;
+    margin: 0 8px 0 0;
+}
+
+input.checkbox {
+    display: none;
+}
+
+input.checkbox + label {
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    line-height: 24px;
+}
+
+input.checkbox.checkbox--right + label {
+    line-height: 49px;
+}
+
+input.checkbox.checkbox--right + label p {
+    float: right;
+    margin: 12px 0 12px 16px;
+}
+
+input.checkbox+label p::before {
+    content: '';
+    display: block;
+    height: 12px;
+    width: 6px;
+    position: absolute;
+    z-index: 1;
+    left: 7px;
+    top: 14px;
+    -webkit-transform: scaleX(-1) rotate(135deg);
+    -ms-transform: scaleX(-1) rotate(135deg);
+    transform: scaleX(-1) rotate(135deg);
+    -webkit-transform-origin: left top;
+    -ms-transform-origin: left top;
+    transform-origin: left top;
+    border-right: 2px solid #FFFFFF;
+    border-top: 2px solid #FFFFFF;
+}
+
+input.checkbox:checked+label p::before {
+    -webkit-animation: check 0.2s;
+    animation: check 0.2s;
+}
+
+input.checkbox:checked+label p::before,
+input.checkbox:checked+label p:hover::before {
+    border-color: #2288CD;
+}
+
+input.checkbox+label p::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    height: 24px;
+    width: 24px;
+    border-radius: 3px;
+    background-color: #FFFFFF;
+    border: 1px solid #DEE3E7;
+}
+
+input.checkbox:checked+label p::after {
+    border-color: #2288CD;
+}
+
+label {
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: .32px;
+    margin-bottom: 4px;
+    line-height: 12px;
+}
