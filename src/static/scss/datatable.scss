@@ -17,6 +17,7 @@
         color: #bdbdbd;
     }
     &__cell {
+        font-size: 14px;
         &__contents {
             padding-left: 10px;
             text-overflow: ellipsis;
@@ -68,11 +69,13 @@
         }
         &--groupHeading {
             background-color: #f5f5f5;
-            border-top: 1px solid #DEE3E7;
             font-weight: bold;
             color: #4B5562;
             font-size: 14px;
             padding-left: 10px;
+            &:not(:first-child) {
+                border-top: 1px solid #DEE3E7;
+            }
         }
         &--edit {
             margin-right: 30px;

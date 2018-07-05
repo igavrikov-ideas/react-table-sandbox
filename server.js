@@ -23,7 +23,7 @@ app.use(bodyParser.json());
 
 const api = express.Router();
 
-const data = [
+const cases = [
   {
     'id': 291,
     'account': {
@@ -251,7 +251,7 @@ const data = [
       'fitId': null
     },
     'name': 'Test',
-    'code': '0001AK',
+    'code': '0002AK',
     'manager': {
       'id': 58,
       'account': {
@@ -336,7 +336,7 @@ const data = [
       'id': 170
     },
     'name': 'Test 2',
-    'code': '0001AB',
+    'code': '0002AB',
     'manager': {
       'id': 54
     },
@@ -428,7 +428,7 @@ const data = [
       'fitId': null
     },
     'name': 'Test',
-    'code': '0001AK',
+    'code': '0002AK',
     'manager': {
       'id': 58,
       'account': {
@@ -513,7 +513,7 @@ const data = [
       'id': 170
     },
     'name': 'Test 2',
-    'code': '0001AB',
+    'code': '0002AB',
     'manager': {
       'id': 54
     },
@@ -1268,14 +1268,14 @@ const data = [
 api.get('/search', (req, res) => {
   const out = [];
   if (req.query.entity === 'Affair') {
-    out.push(...data.map(d => [req.query.entity, d.id]));
+    out.push(...cases.map(d => [req.query.entity, d.id]));
   }
   setTimeout(() => res.send(out), 150); // Simulate delay
 });
 
 api.get('/data', (req, res) => {
   const ids = req.query.ids;
-  const out = data.filter(d => ids.includes(d.id));
+  const out = cases.filter(d => ids.includes(d.id));
   setTimeout(() => res.send(out), 150); // Simulate delay
 });
 

@@ -2,6 +2,8 @@ import React from 'react';
 import { AutoSizer } from 'react-virtualized';
 import axios from 'axios';
 import DataTable from './DataTable';
+import Badge from './Badge';
+import ProgressBar from './ProgressBar';
 
 const ENTITY_CLASS = 'Affair';
 
@@ -71,9 +73,12 @@ class App extends React.Component {
       case 'contractDate':
         return { cellRenderer: dateCellRenderer };
       case 'budget':
-        return { weight: 2, cellRenderer: priceCellRenderer };
+        return { weight: 2.5, cellRenderer: ({ cellData }) => cellData === null ? '' : <div>
+          <CurrencyFormat value={cellData/100} locale={this.state.locale} />&nbsp;<ProgressBar maxValue={cellData} value={60000} />&nbsp;<span>{Math.floor(60000/100000*100)}%</span></div> };
       case 'fixedPrice':
         return { cellRenderer: priceCellRenderer };
+      case 'active':
+        return { weight: 1.2, cellRenderer: ({ cellData }) => cellData ? <Badge className="badge-primary">Aktiivne</Badge> : '' };
       default:
         return {};
     }
@@ -124,7 +129,7 @@ class App extends React.Component {
   }
 
   groupUpdate = (e) => {
-    this.setState({ group: e.target.value === '' ? undefined : [e.target.value] });
+    this.setState({ group: e.target.value === '' ? undefined : e.target.value.split(',') });
   }
 
   filterUpdate = (e) => {
@@ -147,6 +152,8 @@ class App extends React.Component {
           <option value="customer.name">Client</option>
           <option value="name">Name</option>
           <option value="businessSector.0">Business sector</option>
+          <option value="name,customer.name">Name / Client</option>
+          <option value="code">Code</option>
         </select>
         <input type="text" onChange={this.filterUpdate} />
 
