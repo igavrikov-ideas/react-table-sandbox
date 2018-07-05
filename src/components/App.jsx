@@ -101,8 +101,8 @@ class App extends React.Component {
     }
   }
 
-  rowLoader = async (startIndex, stopIndex) => {
-    const ids = await this.getIds();
+  rowLoader = async (startIndex, stopIndex, filteredIds) => {
+    const ids = !filteredIds ? await this.getIds() : filteredIds;
     return axios.get('api/data', {
       params: {
         entity: ENTITY_CLASS,

@@ -78,7 +78,8 @@ class DataTable extends React.Component {
       columnOrder: Object.entries(columnDisplay).map(c => c[0])
     };
     try {
-      preferences = JSON.parse(localStorage.getItem(props.id) || 'null');
+      const storage = JSON.parse(localStorage.getItem(props.id) || 'null');
+      if (storage !== null) preferences = storage;
     } catch (e) {
       // squash
     }
@@ -243,10 +244,10 @@ class DataTable extends React.Component {
   }
 
   getFilteredIds = () => {
+    const allDataIds = this.state.data.map(d => d.id);
     const filteredDataIds = (this.props.filter === undefined ? this.state.sortedData : this.state.sortedData.filter(this.props.filter)).map(d => d.id);
-    console.log('filtered data ids', filteredDataIds);
     return this.props.filter === undefined ? this.props.ids :
-      this.props.ids.filter((id, idx) => !this.isRowLoaded({ index: idx }) || filteredDataIds.includes(id));
+      this.props.ids.filter((id) => !allDataIds.includes(id) || filteredDataIds.includes(id));
   }
 
   rowGetter = ({ index }) => {
@@ -261,7 +262,7 @@ class DataTable extends React.Component {
       }
     }
     const row = data[index];
-    return row === undefined ? (this.isRowLoaded({ index }) ? { _hide: true } : { _loading: true }) : row;
+    return row === undefined ? { _loading: true } : row;
   };
 
   rowRenderer = ({ className, key, columns, rowData, style }) => {
@@ -285,8 +286,11 @@ class DataTable extends React.Component {
   // Don't forget that this accepts an *object* as an argument!!!
   isRowLoaded = ({ index }) => {
     const offsetIndex = this.offsetIndex(index);
+    /*const filteredIds = this.getFilteredIds();
+    if (!filteredIds) return false;
+    const offsetIndex = filteredIds[index];*/
     const data = this.props.filter === undefined ? this.state.sortedData : this.state.sortedData.filter(this.props.filter);
-    return !!this.state.sortedData[offsetIndex];
+    return !!data[offsetIndex];
   }
 
   switchLocale = () => {
@@ -304,14 +308,19 @@ class DataTable extends React.Component {
     if (this.props.ids === null) {
       return 1;
     }
-    const length = this.props.ids.length;
+    const filteredIds = this.getFilteredIds();
+    const length = filteredIds.length;
     return this.state.groupedData ? length + this.state.groupedData.length : length;
   }
 
   loadMoreRows = ({ startIndex, stopIndex }) => new Promise((resolve, reject) => {
     const offsetStartIndex = this.offsetIndex(startIndex);
     const offsetStopIndex = this.offsetIndex(stopIndex);
-    this.props.rowLoader(offsetStartIndex, offsetStopIndex).then((data) => {
+    if (startIndex < 0 || stopIndex < 0) {
+      resolve();
+      return;
+    }
+    this.props.rowLoader(offsetStartIndex, offsetStopIndex, this.getFilteredIds()).then((data) => {
       const existingData = data.filter(ed => !this.state.data.map(d => d.id).includes(ed.id));
       this.setState({ data: this.state.data.concat(existingData), sortedData: this.state.sortedData.concat(existingData) });
       this.groupRows();
